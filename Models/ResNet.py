@@ -7,10 +7,11 @@ from modules import MyFloor
 import math
 
 from torch.autograd import Function
+from torch.nn import *
 
 class dec_to_bin(Function):
     @staticmethod
-    def forward(ctx, input, t): 
+    def forward(ctx, input, t):
         mask = 2 ** torch.arange(int(math.log2(t+1)) - 1, -1, -1).to(input.device)
         return input.int().unsqueeze(-1).bitwise_and(mask).ne(0).float()
 
@@ -52,17 +53,17 @@ class BasicBlock(nn.Module):
                 nn.Conv2d(in_channels, out_channels * BasicBlock.expansion, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(out_channels * BasicBlock.expansion)
             )
-        
+
         self.relu = nn.ReLU(inplace=True)
-    
+
     def hoyer_loss(self, x, t):
         x = convert_to_binary(x, t)
         #self.save_output = x.clone()
         if torch.sum(x)>0: #  and l < self.start_spike_layer
             return torch.sum(x)
-        
+
         return 0.0
-    
+
     def forward(self, x, t, mode):
         #y = self.relu(self.residual_function(x) + self.shortcut(x))
         #print(y.shape)
@@ -114,22 +115,23 @@ class BottleNeck(nn.Module):
     def forward(self, x):
         return self.relu(self.residual_function(x) + self.shortcut(x))
 
-class ResNet(nn.Module):
+class ResNet(Module):
     def __init__(self, block, num_block, num_classes=100):
         super().__init__()
         self.in_channels = 64
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True))
+        self.conv1 = Sequential(
+            Conv2d(3, 64, kernel_size=3, padding=1, bias=False),
+            BatchNorm2d(64),
+            ReLU(inplace=True)
+        )
         # we use a different inputsize than the original paper
         # so conv2_x's stride is 1
         self.conv2_x = self._make_layer(block, 64, num_block[0], 1)
         self.conv3_x = self._make_layer(block, 128, num_block[1], 2)
         self.conv4_x = self._make_layer(block, 256, num_block[2], 2)
         self.conv5_x = self._make_layer(block, 512, num_block[3], 2)
-        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.avg_pool = AdaptiveAvgPool2d((1, 1))
+        self.fc = Linear(512 * block.expansion, num_classes)
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
         """make resnet layers(by layer i didnt mean this 'layer' was the
@@ -151,19 +153,17 @@ class ResNet(nn.Module):
             layers.append(block(self.in_channels, out_channels, stride))
             self.in_channels = out_channels * block.expansion
         return nn.Sequential(*layers)
-    
+
 
     def hoyer_loss(self, x, t):
         x = convert_to_binary(x, t)
         #self.save_output = x.clone()
         if torch.sum(x)>0: #  and l < self.start_spike_layer
             return torch.sum(x)
-        
-        return 0.0
-    
-    def forward(self, x, t, mode):
-        #output = self.conv1(x)
 
+        return 0.0
+
+    def forward(self, x, t, mode):
         out = x
         act_loss = 0
         self.neuron_count = 0
@@ -183,7 +183,7 @@ class ResNet(nn.Module):
                 out = block(out, t, mode)
                 act_loss += block.act_loss
                 self.neuron_count += block.neuron_count
-                
+
                 #print(out.shape)
 
 
@@ -199,21 +199,21 @@ class ResNet(nn.Module):
                 act_loss += self.hoyer_loss(out_binary.clone(), t)
                 out = out[0]*out[1]
         '''
-                
+
 
 
         #output = self.conv3_x(output)
 
-        
+
 
         #output = self.conv4_x(output)
 
-        
+
 
 
         #output = self.conv5_x(output)
 
-        
+
 
 
         output = self.avg_pool(out)
@@ -261,7 +261,7 @@ def resnet18(num_classes=10, **kargs):
     """ return a ResNet 18 object
     """
     return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes)
-    
+
 def resnet20(num_classes=10, **kargs):
     """ return a ResNet 20 object
     """
@@ -298,7 +298,7 @@ from torch.autograd import Function
 
 class dec_to_bin(Function):
     @staticmethod
-    def forward(ctx, input, t): 
+    def forward(ctx, input, t):
         mask = 2 ** torch.arange(int(math.log2(t+1)) - 1, -1, -1).to(input.device)
         return input.int().unsqueeze(-1).bitwise_and(mask).ne(0).float()
 
@@ -340,7 +340,7 @@ class BasicBlock(nn.Module):
                 nn.Conv2d(in_channels, out_channels * BasicBlock.expansion, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(out_channels * BasicBlock.expansion)
             )
-        
+
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
@@ -413,13 +413,13 @@ class ResNet(nn.Module):
             layers.append(block(self.in_channels, out_channels, stride))
             self.in_channels = out_channels * block.expansion
         return nn.Sequential(*layers)
-    
+
     def hoyer_loss(self, x, t):
         x = convert_to_binary(x, t)
         #self.save_output = x.clone()
         if torch.sum(x)>0: #  and l < self.start_spike_layer
             return torch.sum(x)
-        
+
         return 0.0
 
     def forward(self, x, t):
@@ -430,34 +430,34 @@ class ResNet(nn.Module):
         ####conv1
         for i, layers in enumerate[self.conv2_x, self.conv3_x, self.conv4_x, self.conv5_x]:
             for block in layers:
-                for l in block: 
+                for l in block:
                     out = l(out)
                     if isinstance(l, MyFloor):
                         out_binary = out[0]*t
                 #print(out_binary)
                         act_loss += self.hoyer_loss(out_binary.clone(), t)
                         out = out[0]*out[1]
-                
+
                 #print(out.shape)
 
 
         #out = self.conv2_x(out)
 
-                
+
 
 
         #output = self.conv3_x(output)
 
-        
+
 
         #output = self.conv4_x(output)
 
-        
+
 
 
         #output = self.conv5_x(output)
 
-        
+
 
 
         output = self.avg_pool(output)
@@ -505,7 +505,7 @@ def resnet18(num_classes=10, **kargs):
     """ return a ResNet 18 object
     """
     return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes)
-    
+
 def resnet20(num_classes=10, **kargs):
     """ return a ResNet 20 object
     """
