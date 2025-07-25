@@ -128,13 +128,6 @@ class VGG(Module):
         return nn.Sequential(*layers)
 
     def hoyer_loss(self, x, t):
-        #return torch.sum(x)
-        #x[x<0.0] = 0
-        #x[x>=thr] = thr
-        #print("input grad: ", x.grad)
-        #self.save_input = x.clone()
-        #self.save_input.retain_grad()
-
         x = convert_to_binary(x, t)
 
         #self.save_output = x.clone()
@@ -162,8 +155,6 @@ class VGG(Module):
         batch_size, _, _, _ = x.shape
         counter = 0
         time_steps = int(math.log2(t+1))
-
-        #out = self.layer1(out)
 
         for i, layers in enumerate([
                 self.layer1,

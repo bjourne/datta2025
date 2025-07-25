@@ -37,6 +37,7 @@ if __name__ == "__main__":
         dev = "cpu"
     else:
         dev = "cuda:0"
+    act = args.action
 
     # only ImageNet using multiprocessing,
     if args.gpus > 1:
@@ -50,7 +51,7 @@ if __name__ == "__main__":
         model = replace_maxpool2d_by_avgpool2d(model)
         model = replace_activation_by_floor(model, t=args.l, threshold=args.threshold)
         criterion = nn.CrossEntropyLoss()
-        if args.action == 'train':
+        if act == 'train':
             train_ann(
                 train, test,
                 model, args.epochs,
@@ -59,7 +60,7 @@ if __name__ == "__main__":
                 args.hoyer_decay,
                 args.lr, args.wd, args.id
             )
-        elif args.action == 'test' or args.action == 'evaluate':
+        elif act in {"test", "evaluate"}:
             model.load_state_dict(torch.load('./saved_models/' + args.id + '.pth', map_location= dev))
             if args.mode == 'snn':
                 model = replace_activation_by_neuron(model)

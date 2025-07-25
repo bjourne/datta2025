@@ -1,12 +1,16 @@
-import numpy as np
-from torch import nn
-import torch
-from tqdm import tqdm
-from utils import *
-from modules import LabelSmoothing
 import torch.distributed as dist
 import random
 import os
+
+
+import numpy as np
+import torch
+
+from torch import nn
+from torch.optim import SGD
+from tqdm import tqdm
+from utils import *
+from modules import LabelSmoothing
 
 def seed_all(seed=42):
     random.seed(seed)
@@ -48,13 +52,11 @@ def train_ann(
     print("NET", net, device)
     net.to(device)
     para1, para2, para3 = regular_set(net)
-    optimizer = torch.optim.SGD([
-                                {'params': para1, 'weight_decay': wd},
-                                {'params': para2, 'weight_decay': wd},
-                                {'params': para3, 'weight_decay': wd}
-                                ],
-                                lr=lr,
-                                momentum=0.9)
+    optimizer = SGD([
+        {'params': para1, 'weight_decay': wd},
+        {'params': para2, 'weight_decay': wd},
+        {'params': para3, 'weight_decay': wd}
+    ], lr=lr, momentum=0.9)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     best_acc = 0
     for epoch in range(epochs):
