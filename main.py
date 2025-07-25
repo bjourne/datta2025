@@ -33,6 +33,11 @@ if __name__ == "__main__":
     parser.add_argument('--is_pretrained', type=bool, default=False, help='want to use a pre-trained model or not')
     args = parser.parse_args()
 
+    if args.devices == "cpu":
+        dev = "cpu"
+    else:
+        dev = "cuda:0"
+
     # only ImageNet using multiprocessing,
     if args.gpus > 1:
         if args.data.lower() != 'imagenet':
@@ -44,23 +49,28 @@ if __name__ == "__main__":
         model = modelpool(args.model, args.data)
         model = replace_maxpool2d_by_avgpool2d(model)
         model = replace_activation_by_floor(model, t=args.l, threshold=args.threshold)
-        device_ids = list(map(int, args.devices.replace(' ', '').split(',')))
-        #model = nn.DataParallel(model, device_ids=device_ids)
         criterion = nn.CrossEntropyLoss()
         if args.action == 'train':
-            train_ann(train, test, model, args.epochs, 'cuda:'+str(device_ids[0]), criterion, args.l, args.hoyer_decay, args.lr, args.wd, args.id)
+            train_ann(
+                train, test,
+                model, args.epochs,
+                dev,
+                criterion, args.l,
+                args.hoyer_decay,
+                args.lr, args.wd, args.id
+            )
         elif args.action == 'test' or args.action == 'evaluate':
-            model.load_state_dict(torch.load('./saved_models/' + args.id + '.pth', map_location= 'cuda:'+str(device_ids[0])))
+            model.load_state_dict(torch.load('./saved_models/' + args.id + '.pth', map_location= dev))
             if args.mode == 'snn':
                 model = replace_activation_by_neuron(model)
                 model.to('cuda:'+str(device_ids[0]))
-                acc, sparsity = eval_snn(test, model,'cuda:'+str(device_ids[0]), args.t, args.mode)
+                acc, sparsity = eval_snn(test, model, dev, args.t, args.mode)
                 print('Accuracy: ', acc)
                 print('Sparsity: ', sparsity)
             elif args.mode == 'ann':
                 model.to('cuda:'+str(device_ids[0]))
                 #model.cuda()
-                acc, _, sparsity = eval_ann(test, model, criterion, 'cuda:'+str(device_ids[0]), args.l, args.mode)
+                acc, _, sparsity = eval_ann(test, model, criterion, dev, args.l, args.mode)
                 print('Accuracy: {:.4f}'.format(acc))
                 print('Sparsity: {:.4f}'.format(sparsity))
             else:

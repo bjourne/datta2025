@@ -38,15 +38,16 @@ def eval_ann(test_dataloader, model, loss_fn, device, l=8, mode='ann'):
     return tot/length, epoch_loss/length, sparsity/neuron_count
 
 def train_ann(
-    train_dataloader,
-    test_dataloader,
-    model,
+    l_tr,
+    l_te,
+    net,
     epochs,
     device, loss_fn, l, hoyer_decay,
     lr=0.1, wd=5e-4, save=None, parallel=False, rank=0
 ):
-    model.to(device)
-    para1, para2, para3 = regular_set(model)
+    print("NET", net, device)
+    net.to(device)
+    para1, para2, para3 = regular_set(net)
     optimizer = torch.optim.SGD([
                                 {'params': para1, 'weight_decay': wd},
                                 {'params': para2, 'weight_decay': wd},
@@ -60,36 +61,35 @@ def train_ann(
         epoch_loss = 0
         length = 0
         sparsity = 0
-        model.train()
-        for img, label in train_dataloader:
-            img = img.cuda(device)
-            label = label.cuda(device)
+        net.train()
+        for img, label in l_tr:
+            img = img.to(device)
+            label = label.to(device)
             optimizer.zero_grad()
-            out, act_loss = model(img, l)
-            #act_loss = model.module.act_loss
+            out, act_loss = net(img, l)
+
             sparsity += act_loss
             loss = loss_fn(out, label) + hoyer_decay*act_loss
             loss.backward()
             optimizer.step()
-            #print(model.save_input.grad, model.save_output.grad)
-            #exit()
+
             epoch_loss += loss.item()
             length += len(label)
-        tmp_acc, val_loss = eval_ann(test_dataloader, model, loss_fn, device, l)# rank)
+        tmp_acc, val_loss = eval_ann(l_te, net, loss_fn, device, l)# rank)
         if parallel:
             dist.all_reduce(tmp_acc)
         print('Epoch {} -> Val_loss: {}, Acc: {}'.format(epoch, val_loss, tmp_acc), flush=True)
         if rank == 0 and save != None and tmp_acc >= best_acc:
-            torch.save(model.state_dict(), './saved_models/' + save + '.pth')
+            torch.save(net.state_dict(), './saved_models/' + save + '.pth')
         best_acc = max(tmp_acc, best_acc)
         print('best_acc: ', best_acc)
         print('spiking_activity: ', sparsity)
         scheduler.step()
 
 
-    return best_acc, model
+    return best_acc, net
 
-def eval_snn(test_dataloader, model, device, sim_len=8, mode='ann', rank=0, t=8):
+def eval_snn(l_te, model, device, sim_len=8, mode='ann', rank=0, t=8):
     tot = torch.zeros(sim_len).cuda(device)
     length = 0
     sparsity, neuron_count = 0, 0
@@ -97,7 +97,7 @@ def eval_snn(test_dataloader, model, device, sim_len=8, mode='ann', rank=0, t=8)
     model.eval()
     # valuate
     with torch.no_grad():
-        for idx, (img, label) in enumerate(tqdm(test_dataloader)):
+        for idx, (img, label) in enumerate(tqdm(l_te)):
             spikes = 0
             length += len(label)
             img = img.cuda(device)
