@@ -5,35 +5,6 @@ from tqdm import tqdm
 import requests
 
 def train_ann(net, device, data_loader, optimizer, loss_function, epoch=None):
-    '''
-    * :ref:`API in English <train_ann-en>`
-
-    .. _train_ann-cn:
-
-    :param net: 训练的模型
-    :param device: 运行的设备
-    :param data_loader: 训练集
-    :param optimizer: 神经网络优化器
-    :param loss_function: 损失函数
-    :param epoch: 当前训练期数
-    :return: ``None``
-
-    经典的神经网络训练程序预设，便于直接调用训练网络
-
-    * :ref:`中文API <train_ann-cn>`
-
-    .. _train_ann-en:
-
-    :param net: network to train
-    :param device: running device
-    :param data_loader: training data loader
-    :param optimizer: neural network optimizer
-    :param loss_function: neural network loss function
-    :param epoch: current training epoch
-    :return: ``None``
-
-    Preset classic neural network training program
-    '''
     net.train()
     losses = []
     correct = 0.0

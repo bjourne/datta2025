@@ -7,63 +7,9 @@ curly_bracket_l = '{'
 curly_bracket_r = '}'
 
 def heaviside(x: torch.Tensor):
-    '''
-    * :ref:`API in English <heaviside.__init__-en>`
-    .. _heaviside.__init__-cn:
-
-    :param x: 输入tensor
-    :return: 输出tensor
-
-    heaviside阶跃函数，定义为
-
-    .. math::
-        g(x) =
-        \\begin{cases}
-        1, & x \\geq 0 \\\\
-        0, & x < 0 \\\\
-        \\end{cases}
-
-    阅读 `HeavisideStepFunction <https://mathworld.wolfram.com/HeavisideStepFunction.html>`_ 以获得更多信息。
-
-    * :ref:`中文API <heaviside.__init__-cn>`
-    .. _heaviside.__init__-en:
-
-    :param x: the input tensor
-    :return: the output tensor
-
-    The heaviside function, which is defined by
-
-    .. math::
-        g(x) =
-        \\begin{cases}
-        1, & x \\geq 0 \\\\
-        0, & x < 0 \\\\
-        \\end{cases}
-
-    For more information, see `HeavisideStepFunction <https://mathworld.wolfram.com/HeavisideStepFunction.html>`_.
-
-    '''
     return (x >= 0).to(x)
 
 def check_manual_grad(primitive_function, spiking_function, eps=1e-5):
-    '''
-    :param primitive_function: 梯度替代函数的原函数
-    :type primitive_function: callable
-    :param spiking_function: 梯度替代函数
-    :type spiking_function: callable
-    :param eps: 最大误差
-    :type eps: float
-
-    梯度替代函数的反向传播一般是手写的，可以用此函数去检查手写梯度是否正确。
-
-    此函数检查梯度替代函数spiking_function的反向传播，与原函数primitive_function的反向传播结果是否一致。“一致”被定义为，两者的误差不超过eps。
-
-    示例代码：
-
-    .. code-block:: python
-
-        surrogate.check_manual_grad(surrogate.ATan.primitive_function, surrogate.atan.apply)
-    '''
     alpha = torch.tensor(1.0, dtype=torch.float)
     x = torch.arange(-16, 16, 32 / 8192)
     x.requires_grad_(True)
@@ -159,16 +105,16 @@ class PiecewiseQuadratic(SurrogateFunctionBase):
         反向传播时使用分段二次函数的梯度（三角形函数）的脉冲发放函数。反向传播为
 
         .. math::
-            g'(x) = 
+            g'(x) =
             \\begin{cases}
             0, & |x| > \\frac{1}{\\alpha} \\\\
-            -\\alpha^2|x|+\\alpha, & |x| \\leq \\frac{1}{\\alpha} 
+            -\\alpha^2|x|+\\alpha, & |x| \\leq \\frac{1}{\\alpha}
             \\end{cases}
 
         对应的原函数为
 
         .. math::
-            g(x) = 
+            g(x) =
             \\begin{cases}
             0, & x < -\\frac{1}{\\alpha} \\\\
             -\\frac{1}{2}\\alpha^2|x|x + \\alpha x + \\frac{1}{2}, & |x| \\leq \\frac{1}{\\alpha}  \\\\
@@ -191,16 +137,16 @@ class PiecewiseQuadratic(SurrogateFunctionBase):
         The piecewise quadratic surrogate spiking function. The gradient is defined by
 
         .. math::
-            g'(x) = 
+            g'(x) =
             \\begin{cases}
             0, & |x| > \\frac{1}{\\alpha} \\\\
-            -\\alpha^2|x|+\\alpha, & |x| \\leq \\frac{1}{\\alpha} 
+            -\\alpha^2|x|+\\alpha, & |x| \\leq \\frac{1}{\\alpha}
             \\end{cases}
 
         The primitive function is defined by
 
         .. math::
-            g(x) = 
+            g(x) =
             \\begin{cases}
             0, & x < -\\frac{1}{\\alpha} \\\\
             -\\frac{1}{2}\\alpha^2|x|x + \\alpha x + \\frac{1}{2}, & |x| \\leq \\frac{1}{\\alpha}  \\\\
@@ -283,10 +229,10 @@ class PiecewiseExp(SurrogateFunctionBase):
         对应的原函数为
 
         .. math::
-            g(x) = 
+            g(x) =
             \\begin{cases}
             \\frac{1}{2}e^{\\alpha x}, & x < 0 \\\\
-            1 - \\frac{1}{2}e^{-\\alpha x}, & x \\geq 0 
+            1 - \\frac{1}{2}e^{-\\alpha x}, & x \\geq 0
             \\end{cases}
 
         .. image:: ./_static/API/clock_driven/surrogate/PiecewiseExp.*
@@ -310,10 +256,10 @@ class PiecewiseExp(SurrogateFunctionBase):
         The primitive function is defined by
 
         .. math::
-            g(x) = 
+            g(x) =
             \\begin{cases}
             \\frac{1}{2}e^{\\alpha x}, & x < 0 \\\\
-            1 - \\frac{1}{2}e^{-\\alpha x}, & x \\geq 0 
+            1 - \\frac{1}{2}e^{-\\alpha x}, & x \\geq 0
             \\end{cases}
 
         .. image:: ./_static/API/clock_driven/surrogate/PiecewiseExp.*
@@ -839,64 +785,6 @@ class erf(torch.autograd.Function):
 
 class Erf(SurrogateFunctionBase):
     def __init__(self, alpha=2.0, spiking=True):
-        '''
-        * :ref:`API in English <Erf.__init__-en>`
-        .. _Erf.__init__-cn:
-
-        :param alpha: 控制反向传播时梯度的平滑程度的参数
-        :param spiking: 是否输出脉冲，默认为 ``True``，在前向传播时使用 ``heaviside`` 而在反向传播使用替代梯度。若为 ``False``
-            则不使用替代梯度，前向传播时，使用反向传播时的梯度替代函数对应的原函数
-
-        反向传播时使用高斯误差函数(erf)的梯度的脉冲发放函数。反向传播为
-
-        .. math::
-            g'(x) = \\frac{\\alpha}{\\sqrt{\pi}}e^{-\\alpha^2x^2}
-
-        对应的原函数为
-
-        .. math::
-            :nowrap:
-
-            \\begin{split}
-            g(x) &= \\frac{1}{2}(1-\\text{erf}(-\\alpha x)) \\\\
-            &= \\frac{1}{2} \\text{erfc}(-\\alpha x) \\\\
-            &= \\frac{1}{\\sqrt{\\pi}}\int_{-\\infty}^{\\alpha x}e^{-t^2}dt
-            \\end{split}
-
-        .. image:: ./_static/API/clock_driven/surrogate/Erf.*
-            :width: 100%
-        
-        该函数在文章 [#esser2015backpropagation]_ [#STBP]_ [#SRNN]_ 中使用。
-
-        * :ref:`中文API <Erf.__init__-cn>`
-        .. _Erf.__init__-en:
-
-        :param alpha: parameter to control smoothness of gradient
-        :param spiking: whether output spikes. The default is ``True`` which means that using ``heaviside`` in forward
-            propagation and using surrogate gradient in backward propagation. If ``False``, in forward propagation,
-            using the primitive function of the surrogate gradient function used in backward propagation
-
-        The Gaussian error (erf) surrogate spiking function. The gradient is defined by
-
-        .. math::
-            g'(x) = \\frac{\\alpha}{\\sqrt{\pi}}e^{-\\alpha^2x^2}
-
-        The primitive function is defined by
-
-        .. math::
-            :nowrap:
-
-            \\begin{split}
-            g(x) &= \\frac{1}{2}(1-\\text{erf}(-\\alpha x)) \\\\
-            &= \\frac{1}{2} \\text{erfc}(-\\alpha x) \\\\
-            &= \\frac{1}{\\sqrt{\\pi}}\int_{-\\infty}^{\\alpha x}e^{-t^2}dt
-            \\end{split}
-
-        .. image:: ./_static/API/clock_driven/surrogate/Erf.*
-            :width: 100%
-
-        The function is used in [#esser2015backpropagation]_ [#STBP]_ [#SRNN]_.
-        '''
         super().__init__(alpha, spiking)
 
 
@@ -907,29 +795,6 @@ class Erf(SurrogateFunctionBase):
     @staticmethod
     def primitive_function(x: torch.Tensor, alpha):
         return torch.erfc_(-alpha * x) / 2
-
-    # plt.style.use(['science', 'muted', 'grid'])
-    # fig = plt.figure(dpi=200)
-    # x = torch.arange(-2.5, 2.5, 0.001)
-    # plt.plot(x.data, surrogate.heaviside(x), label='Heaviside', linestyle='-.')
-    # surrogate_function = surrogate.Erf(alpha=2, spiking=False)
-    # y = surrogate_function(x)
-    # plt.plot(x.data, y.data, label='Primitive, $\\alpha=2$')
-
-    # surrogate_function = surrogate.Erf(alpha=2, spiking=False)
-    # x.requires_grad_(True)
-    # y = surrogate_function(x)
-    # z = y.sum()
-    # z.backward()
-    # plt.plot(x.data, x.grad, label='Gradient, $\\alpha=2$')
-    # plt.xlim(-2, 2)
-    # plt.legend()
-    # plt.title('Gaussian error surrogate function')
-    # plt.xlabel('Input')
-    # plt.ylabel('Output')
-    # plt.grid(linestyle='--')
-    # plt.show()
-
 
 class piecewise_leaky_relu(torch.autograd.Function):
     @staticmethod
@@ -952,72 +817,6 @@ class piecewise_leaky_relu(torch.autograd.Function):
 
 class PiecewiseLeakyReLU(MultiArgsSurrogateFunctionBase):
     def __init__(self, w=1., c=0.01, spiking=True):
-        '''
-        * :ref:`API in English <PiecewiseLeakyReLU.__init__-en>`
-        .. _PiecewiseLeakyReLU.__init__-cn:
-
-        :param w: ``-w <= x <= w`` 时反向传播的梯度为 ``1 / 2w``
-        :param c: ``x > w`` 或 ``x < -w`` 时反向传播的梯度为 ``c``
-        :param spiking: 是否输出脉冲，默认为 ``True``，在前向传播时使用 ``heaviside`` 而在反向传播使用替代梯度。若为 ``False``
-            则不使用替代梯度，前向传播时，使用反向传播时的梯度替代函数对应的原函数
-
-        分段线性的近似脉冲发放函数。梯度为
-
-        .. math::
-            g'(x) =
-            \\begin{cases}
-            \\frac{1}{w}, & -w \\leq x \\leq w \\\\
-            c, & x < -w ~or~ x > w
-            \\end{cases}
-
-        对应的原函数为
-
-        .. math::
-            g(x) =
-            \\begin{cases}
-            cx + cw, & x < -w \\\\
-            \\frac{1}{2w}x + \\frac{1}{2}, & -w \\leq x \\leq w \\\\
-            cx - cw + 1, & x > w \\\\
-            \\end{cases}
-
-        .. image:: ./_static/API/clock_driven/surrogate/PiecewiseLeakyReLU.*
-            :width: 100%
-
-        该函数在文章 [#yin2017algorithm]_ [#STBP]_ [#huh2018gradient]_ [#wu2019direct]_ [#STCA]_ [#roy2019scaling]_ [#LISNN]_ [#DECOLLE]_ 中使用。
-
-        * :ref:`中文API <PiecewiseLeakyReLU.__init__-cn>`
-        .. _PiecewiseLeakyReLU.__init__-en:
-
-        :param w: when ``-w <= x <= w`` the gradient is ``1 / 2w``
-        :param c: when ``x > w`` or ``x < -w`` the gradient is ``c``
-        :param spiking: whether output spikes. The default is ``True`` which means that using ``heaviside`` in forward
-            propagation and using surrogate gradient in backward propagation. If ``False``, in forward propagation,
-            using the primitive function of the surrogate gradient function used in backward propagation
-
-        The piecewise surrogate spiking function. The gradient is defined by
-
-        .. math::
-            g'(x) =
-            \\begin{cases}
-            \\frac{1}{w}, & -w \\leq x \\leq w \\\\
-            c, & x < -w ~or~ x > w
-            \\end{cases}
-
-        The primitive function is defined by
-
-        .. math::
-            g(x) =
-            \\begin{cases}
-            cx + cw, & x < -w \\\\
-            \\frac{1}{2w}x + \\frac{1}{2}, & -w \\leq x \\leq w \\\\
-            cx - cw + 1, & x > w
-            \\end{cases}
-
-        .. image:: ./_static/API/clock_driven/surrogate/PiecewiseLeakyReLU.*
-            :width: 100%
-
-        The function is used in [#yin2017algorithm]_ [#STBP]_ [#huh2018gradient]_ [#wu2019direct]_ [#STCA]_ [#roy2019scaling]_ [#LISNN]_ [#DECOLLE]_.
-        '''
         super().__init__(spiking)
         assert w > 0.
         self.w = w

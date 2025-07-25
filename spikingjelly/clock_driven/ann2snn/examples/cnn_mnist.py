@@ -146,9 +146,6 @@ def main(log_dir=None):
         optimizer = torch.optim.Adam(ann.parameters(), lr=learning_rate, weight_decay=5e-4)
         best_acc = 0.0
         for epoch in range(train_epoch):
-            # 使用utils中预先写好的训练程序训练网络
-            # 训练程序的写法和经典ANN中的训练也是一样的
-            # Train the network using a pre-prepared code in ''utils''
             utils.train_ann(net=ann,
                             device=train_device,
                             data_loader=train_data_loader,
@@ -156,8 +153,6 @@ def main(log_dir=None):
                             loss_function=loss_function,
                             epoch=epoch
                             )
-            # 使用utils中预先写好的验证程序验证网络输出
-            # Validate the network using a pre-prepared code in ''utils''
             acc = utils.val_ann(net=ann,
                                 device=train_device,
                                 data_loader=test_data_loader,

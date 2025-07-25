@@ -33,19 +33,26 @@ def eval_ann(test_dataloader, model, loss_fn, device, l=8, mode='ann'):
             neuron_count += model.neuron_count
             loss = loss_fn(out, label)
             epoch_loss += loss.item()
-            length += len(label)    
+            length += len(label)
             tot += (label==out.max(1)[1]).sum().data
     return tot/length, epoch_loss/length, sparsity/neuron_count
 
-def train_ann(train_dataloader, test_dataloader, model, epochs, device, loss_fn, l, hoyer_decay, lr=0.1, wd=5e-4, save=None, parallel=False, rank=0):
+def train_ann(
+    train_dataloader,
+    test_dataloader,
+    model,
+    epochs,
+    device, loss_fn, l, hoyer_decay,
+    lr=0.1, wd=5e-4, save=None, parallel=False, rank=0
+):
     model.to(device)
     para1, para2, para3 = regular_set(model)
     optimizer = torch.optim.SGD([
-                                {'params': para1, 'weight_decay': wd}, 
-                                {'params': para2, 'weight_decay': wd}, 
+                                {'params': para1, 'weight_decay': wd},
+                                {'params': para2, 'weight_decay': wd},
                                 {'params': para3, 'weight_decay': wd}
                                 ],
-                                lr=lr, 
+                                lr=lr,
                                 momentum=0.9)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     best_acc = 0
@@ -64,7 +71,7 @@ def train_ann(train_dataloader, test_dataloader, model, epochs, device, loss_fn,
             loss = loss_fn(out, label) + hoyer_decay*act_loss
             loss.backward()
             optimizer.step()
-            #print(model.save_input.grad, model.save_output.grad) 
+            #print(model.save_input.grad, model.save_output.grad)
             #exit()
             epoch_loss += loss.item()
             length += len(label)

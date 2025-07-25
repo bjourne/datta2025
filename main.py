@@ -1,5 +1,7 @@
 import torch.multiprocessing as mp
 import argparse
+
+from argparse import ArgumentParser
 from Models import modelpool
 from Preprocess import datapool
 from funcs import *
@@ -10,12 +12,12 @@ import os
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
 
     parser.add_argument('action', default='train', type=str, help='Action: train or test.')
     parser.add_argument('--gpus', default=1, type=int, help='GPU number to use.')
     parser.add_argument('--bs', default=8, type=int, help='Batchsize')
-    parser.add_argument('--lr', default=0.1, type=float, help='Learning rate') 
+    parser.add_argument('--lr', default=0.1, type=float, help='Learning rate')
     parser.add_argument('--wd', default=5e-4, type=float, help='Weight decay')
     parser.add_argument('--epochs', default=600, type=int, help='Training epochs') # better if set to 300 for CIFAR dataset
     parser.add_argument('--id', default=None, type=str, help='Model identifier')
@@ -30,8 +32,6 @@ if __name__ == "__main__":
     parser.add_argument('--threshold', type=str, default='layer-wise', help='channel-wise or layer-wise: choice of MyFloor threshold')
     parser.add_argument('--is_pretrained', type=bool, default=False, help='want to use a pre-trained model or not')
     args = parser.parse_args()
-    
-    #seed_all()
 
     # only ImageNet using multiprocessing,
     if args.gpus > 1:
@@ -39,7 +39,6 @@ if __name__ == "__main__":
             AssertionError('Only ImageNet using multiprocessing.')
         mp.spawn(main_worker, nprocs=args.gpus, args=(args.gpus, args))
     else:
-        # preparing data
         train, test = datapool(args.data, args.bs)
         # preparing model
         model = modelpool(args.model, args.data)
