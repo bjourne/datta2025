@@ -10,11 +10,13 @@ from torch.autograd import Function
 from torch.nn import *
 
 class ScaledNeuron(Module):
-    def __init__(self, scale=1.):
+    def __init__(self, scale):
         super(ScaledNeuron, self).__init__()
         self.scale = scale
         self.t = 0
         self.neuron = neuron.IFNode(v_reset=None)
+        print("Making neuron", scale)
+
     def forward(self, x):
         x = x / self.scale
         if self.t == 0:
@@ -83,7 +85,7 @@ class VGG(Module):
         self.layer5 = self._make_layers(cfg[vgg_name][4], dropout)
         self.neuron = neuron.IFNode(v_reset=None)
         if num_classes == 1000:
-            self.classifier = nn.Sequential(
+            self.classifier = Sequential(
                 Flatten(),
                 Linear(512*7*7, 4096),
                 ReLU(inplace=True),
@@ -94,7 +96,7 @@ class VGG(Module):
                 Linear(4096, num_classes)
             )
         else:
-            self.classifier = nn.Sequential(
+            self.classifier = Sequential(
                 Flatten(),
                 Linear(512, 4096),
                 ReLU(inplace=True),
@@ -130,22 +132,8 @@ class VGG(Module):
     def hoyer_loss(self, x, t):
         x = convert_to_binary(x, t)
 
-        #self.save_output = x.clone()
-        #self.save_output.retain_grad()
-        #print("output_grad: ", x.grad)
-        if torch.sum(x)>0: #  and l < self.start_spike_layer
+        if torch.sum(x)>0:
             return torch.sum(x)
-            #return  ((torch.sum(x))**2 / torch.sum((x)**2))
-
-            # if self.loss_type == 'mean':
-            #     return torch.mean(torch.sum(torch.abs(x), dim=(1,2,3))**2 / torch.sum((x)**2, dim=(1,2,3)))
-            # elif self.loss_type == 'sum':
-            #     return  (torch.sum(torch.abs(x))**2 / torch.sum((x)**2))
-            # elif self.loss_type == 'cw':
-            #     hoyer_thr = torch.sum((x)**2, dim=(0,2,3)) / torch.sum(torch.abs(x), dim=(0,2,3))
-            #     # 1.0 is the max thr
-            #     hoyer_thr = torch.nan_to_num(hoyer_thr, nan=1.0)
-            #     return torch.mean(hoyer_thr)
         return 0.0
 
     def forward(self, x, t, mode):

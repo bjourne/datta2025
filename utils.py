@@ -7,9 +7,12 @@ from torch.nn import *
 from modules import TCL, MyFloor, ScaledNeuron, StraightThrough
 
 def isActivation(name):
-    if 'relu' in name.lower() or 'clip' in name.lower() or 'floor' in name.lower() or 'tcl' in name.lower():
-        return True
-    return False
+    return (
+        'relu' in name.lower() or
+        'clip' in name.lower() or
+        'floor' in name.lower() or
+        'tcl' in name.lower()
+    )
 
 def replace_activation_by_module(model, m):
     for name, module in model._modules.items():
@@ -52,12 +55,15 @@ def replace_activation_by_floor(model, t, threshold):
     return model
 
 def replace_activation_by_neuron(net):
-    for name, module in net._modules.items():
-        if hasattr(module,"_modules"):
-            net._modules[name] = replace_activation_by_neuron(module)
-        if isActivation(module.__class__.__name__.lower()):
-            if hasattr(module, "up"):
-                net._modules[name] = ScaledNeuron(scale=module.up.item())
+    for name, mod in net._modules.items():
+        cname = mod.__class__.__name__.lower()
+        print(cname)
+        if hasattr(mod, "_modules"):
+            net._modules[name] = replace_activation_by_neuron(mod)
+        if isActivation(cname):
+            print("yuP!", hasattr(mod, "up"))
+            if hasattr(mod, "up"):
+                net._modules[name] = ScaledNeuron(scale=mod.up.item())
             else:
                 net._modules[name] = ScaledNeuron(scale=1.)
     return net

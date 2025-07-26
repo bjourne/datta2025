@@ -25,10 +25,6 @@ class BasicBlock(nn.Module):
     """Basic Block for resnet 18 and resnet 34
     """
 
-    #BasicBlock and BottleNeck block
-    #have different output size
-    #we use class attribute expansion
-    #to distinct
     expansion = 1
 
     def __init__(self, in_channels, out_channels, stride=1):
@@ -83,7 +79,7 @@ class BasicBlock(nn.Module):
         self.neuron_count += torch.numel(out)
         return out
 
-class BottleNeck(nn.Module):
+class BottleNeck(Module):
     """Residual block for resnet over 50 layers
     """
     expansion = 4
@@ -182,14 +178,15 @@ class ResNet(Module):
         output = self.fc(output)
         return output, act_loss
 
-class ResNet4Cifar(nn.Module):
+class ResNet4Cifar(Module):
     def __init__(self, block, num_block, num_classes=10):
         super().__init__()
         self.in_channels = 16
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(16),
-            nn.ReLU(inplace=True))
+            Conv2d(3, 16, kernel_size=3, padding=1, bias=False),
+            BatchNorm2d(16),
+            ReLU(inplace=True)
+        )
         # we use a different inputsize than the original paper
         # so conv2_x's stride is 1
         self.conv2_x = self._make_layer(block, 16, num_block[0], 1)
