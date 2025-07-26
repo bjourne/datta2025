@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
+
 from torch.nn.parameter import Parameter
 from torch.nn import functional as F
+from torch.nn import *
 from modules import TCL, MyFloor, ScaledNeuron, StraightThrough
 
 def isActivation(name):
@@ -26,8 +28,7 @@ def replace_activation_by_floor(model, t, threshold):
     for name, module in model._modules.items():
         if hasattr(module, "_modules"):
             model._modules[name] = replace_activation_by_floor(module, t, threshold)
-        #if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
-        if isinstance(module, nn.Conv2d):
+        if isinstance(module, Conv2d):
             #print("Batch normalization")
             global num_features
             num_features = module.out_channels
@@ -47,21 +48,19 @@ def replace_activation_by_floor(model, t, threshold):
                 if t == 0:
                     model._modules[name] = TCL()
                 else:
-                    #global num_features
                     model._modules[name] = MyFloor(8., t, num_features, threshold)
-                    #print(num_features)
     return model
 
-def replace_activation_by_neuron(model):
-    for name, module in model._modules.items():
+def replace_activation_by_neuron(net):
+    for name, module in net._modules.items():
         if hasattr(module,"_modules"):
-            model._modules[name] = replace_activation_by_neuron(module)
+            net._modules[name] = replace_activation_by_neuron(module)
         if isActivation(module.__class__.__name__.lower()):
             if hasattr(module, "up"):
-                model._modules[name] = ScaledNeuron(scale=module.up.item())
+                net._modules[name] = ScaledNeuron(scale=module.up.item())
             else:
-                model._modules[name] = ScaledNeuron(scale=1.)
-    return model
+                net._modules[name] = ScaledNeuron(scale=1.)
+    return net
 
 def replace_maxpool2d_by_avgpool2d(model):
     for name, module in model._modules.items():
@@ -152,24 +151,3 @@ def regular_set(model, paras=([],[],[])):
             for name, para in module.named_parameters():
                 paras[1].append(para)
     return paras
-
-class LabelSmoothing(nn.Module):
-    """
-    NLL loss with label smoothing.
-    """
-    def __init__(self, smoothing=0.1):
-        """
-        Constructor for the LabelSmoothing module.
-        :param smoothing: label smoothing factor
-        """
-        super(LabelSmoothing, self).__init__()
-        self.confidence = 1.0 - smoothing
-        self.smoothing = smoothing
-
-    def forward(self, x, target):
-        logprobs = torch.nn.functional.log_softmax(x, dim=-1)
-        nll_loss = -logprobs.gather(dim=-1, index=target.unsqueeze(1))
-        nll_loss = nll_loss.squeeze(1)
-        smooth_loss = -logprobs.mean(dim=-1)
-        loss = self.confidence * nll_loss + self.smoothing * smooth_loss
-        return loss.mean()

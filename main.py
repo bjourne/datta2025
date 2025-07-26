@@ -1,9 +1,10 @@
 import torch.multiprocessing as mp
 import argparse
 
-from argparse import ArgumentParser
 from Models import modelpool
 from Preprocess import datapool
+from argparse import ArgumentParser
+from pathlib import Path
 from funcs import *
 from utils import replace_activation_by_floor, replace_activation_by_neuron, replace_maxpool2d_by_avgpool2d
 from ImageNet.train import main_worker
@@ -39,39 +40,43 @@ if __name__ == "__main__":
         dev = "cuda:0"
     act = args.action
 
+    path = Path("./saved_models")
+    path.mkdir(parents = True, exist_ok=True)
+    path = path / ("%s.pth" % args.id)
+    print(path)
+
     # only ImageNet using multiprocessing,
     if args.gpus > 1:
         if args.data.lower() != 'imagenet':
             AssertionError('Only ImageNet using multiprocessing.')
         mp.spawn(main_worker, nprocs=args.gpus, args=(args.gpus, args))
     else:
-        train, test = datapool(args.data, args.bs)
-        # preparing model
-        model = modelpool(args.model, args.data)
-        model = replace_maxpool2d_by_avgpool2d(model)
-        model = replace_activation_by_floor(model, t=args.l, threshold=args.threshold)
+        train, l_te = datapool(args.data, args.bs)
+        # preparing net
+        net = modelpool(args.model, args.data)
+        net = replace_maxpool2d_by_avgpool2d(net)
+        net = replace_activation_by_floor(net, t=args.l, threshold=args.threshold)
         criterion = nn.CrossEntropyLoss()
         if act == 'train':
             train_ann(
-                train, test,
-                model, args.epochs,
+                train, l_te,
+                net, args.epochs,
                 dev,
                 criterion, args.l,
                 args.hoyer_decay,
                 args.lr, args.wd, args.id
             )
         elif act in {"test", "evaluate"}:
-            model.load_state_dict(torch.load('./saved_models/' + args.id + '.pth', map_location= dev))
+            net.load_state_dict(torch.load(path, map_location = dev))
             if args.mode == 'snn':
-                model = replace_activation_by_neuron(model)
-                model.to('cuda:'+str(device_ids[0]))
-                acc, sparsity = eval_snn(test, model, dev, args.t, args.mode)
+                net = replace_activation_by_neuron(net)
+                net.to(dev)
+                acc, sparsity = eval_snn(l_te, net, dev, args.t, args.mode)
                 print('Accuracy: ', acc)
                 print('Sparsity: ', sparsity)
             elif args.mode == 'ann':
-                model.to('cuda:'+str(device_ids[0]))
-                #model.cuda()
-                acc, _, sparsity = eval_ann(test, model, criterion, dev, args.l, args.mode)
+                net.to(dev)
+                acc, _, sparsity = eval_ann(l_te, net, criterion, dev, args.l, args.mode)
                 print('Accuracy: {:.4f}'.format(acc))
                 print('Sparsity: {:.4f}'.format(sparsity))
             else:
