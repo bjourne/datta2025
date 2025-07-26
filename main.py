@@ -6,8 +6,10 @@ from Preprocess import datapool
 from argparse import ArgumentParser
 from pathlib import Path
 from funcs import *
+from torch.nn import *
 from utils import replace_activation_by_floor, replace_activation_by_neuron, replace_maxpool2d_by_avgpool2d
-from ImageNet.train import main_worker
+
+
 import torch.nn as nn
 import os
 
@@ -15,12 +17,14 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
 
-    parser.add_argument('action', default='train', type=str, help='Action: train or test.')
+    parser.add_argument(
+        'action', default='train', type=str, help='Action: train or test.'
+    )
     parser.add_argument('--gpus', default=1, type=int, help='GPU number to use.')
     parser.add_argument('--bs', default=8, type=int, help='Batchsize')
     parser.add_argument('--lr', default=0.1, type=float, help='Learning rate')
     parser.add_argument('--wd', default=5e-4, type=float, help='Weight decay')
-    parser.add_argument('--epochs', default=600, type=int, help='Training epochs') # better if set to 300 for CIFAR dataset
+    parser.add_argument('--epochs', default=600, type=int, help='Training epochs')
     parser.add_argument('--id', default=None, type=str, help='Model identifier')
     parser.add_argument('--devices', default='0', type=str, help='gpu ids to use')
     parser.add_argument('--l', default=16, type=int, help='L')
@@ -39,44 +43,44 @@ if __name__ == "__main__":
     else:
         dev = "cuda:0"
     act = args.action
+    mode = args.mode
 
     path = Path("./saved_models")
     path.mkdir(parents = True, exist_ok=True)
     path = path / ("%s.pth" % args.id)
-    print(path)
 
-    # only ImageNet using multiprocessing,
+    print(act, mode)
+
     if args.gpus > 1:
-        if args.data.lower() != 'imagenet':
-            AssertionError('Only ImageNet using multiprocessing.')
-        mp.spawn(main_worker, nprocs=args.gpus, args=(args.gpus, args))
+        assert False
     else:
         train, l_te = datapool(args.data, args.bs)
-        # preparing net
+
         net = modelpool(args.model, args.data)
         net = replace_maxpool2d_by_avgpool2d(net)
         net = replace_activation_by_floor(net, t=args.l, threshold=args.threshold)
-        criterion = nn.CrossEntropyLoss()
+        crit = CrossEntropyLoss()
         if act == 'train':
             train_ann(
                 train, l_te,
                 net, args.epochs,
                 dev,
-                criterion, args.l,
+                crit, args.l,
                 args.hoyer_decay,
                 args.lr, args.wd, args.id
             )
         elif act in {"test", "evaluate"}:
             net.load_state_dict(torch.load(path, map_location = dev))
-            if args.mode == 'snn':
+            if mode == 'snn':
                 net = replace_activation_by_neuron(net)
+                print(net)
                 net.to(dev)
-                acc, sparsity = eval_snn(l_te, net, dev, args.t, args.mode)
+                acc, sparsity = eval_snn(l_te, net, dev, args.t)
                 print('Accuracy: ', acc)
                 print('Sparsity: ', sparsity)
-            elif args.mode == 'ann':
+            elif mode == 'ann':
                 net.to(dev)
-                acc, _, sparsity = eval_ann(l_te, net, criterion, dev, args.l, args.mode)
+                acc, _, sparsity = eval_ann(l_te, net, crit, dev, args.l, mode)
                 print('Accuracy: {:.4f}'.format(acc))
                 print('Sparsity: {:.4f}'.format(sparsity))
             else:

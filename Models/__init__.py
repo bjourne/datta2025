@@ -21,5 +21,4 @@ def modelpool(MODELNAME, DATANAME):
         return resnet20(num_classes=num_classes)
     elif MODELNAME.lower() == 'swin_transformer':
         return SwinTransformer(img_size=32, num_classes=num_classes, patch_size=2, window_size=4)
-    print("still not support this model")
-    exit(0)
+    assert False

@@ -16,17 +16,20 @@ class StraightThrough(Module):
         return input
 
 class ScaledNeuron(Module):
-    def __init__(self, scale=1.):
+    def __init__(self, scale):
         super(ScaledNeuron, self).__init__()
         self.scale = scale
         self.t = 0
         self.neuron = IFNode(v_reset=None)
+        print("neuron here", scale)
 
     def forward(self, x):
+
         x = x / self.scale
         if self.t == 0:
             self.neuron(torch.ones_like(x)*0.5, 1.0, True)
         x = self.neuron(x, 1.0, True)
+        print("output", x)
         self.t += 1
         return x * self.scale
 
@@ -63,15 +66,10 @@ class MyFloor(nn.Module):
 
 
     def forward(self, x):
-        #if self.channels > 500:
-        #    print(x.shape)
         x = x / self.up
-        #if self.channels > 500:
-        #    print(x.shape)
         x = myfloor(x*self.t+0.5)/self.t
         x = torch.clamp(x, 0, 1)
         x = x * self.up
-        #print(x.shape)
         return x
 
 class TCL(nn.Module):

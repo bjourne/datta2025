@@ -57,15 +57,14 @@ def replace_activation_by_floor(model, t, threshold):
 def replace_activation_by_neuron(net):
     for name, mod in net._modules.items():
         cname = mod.__class__.__name__.lower()
-        print(cname)
         if hasattr(mod, "_modules"):
             net._modules[name] = replace_activation_by_neuron(mod)
         if isActivation(cname):
             print("yuP!", hasattr(mod, "up"))
             if hasattr(mod, "up"):
-                net._modules[name] = ScaledNeuron(scale=mod.up.item())
+                net._modules[name] = ScaledNeuron(mod.up.item())
             else:
-                net._modules[name] = ScaledNeuron(scale=1.)
+                net._modules[name] = ScaledNeuron(1.)
     return net
 
 def replace_maxpool2d_by_avgpool2d(model):

@@ -4,29 +4,9 @@ import torch
 from modules import MyFloor
 import math
 
-
 from spikingjelly.clock_driven import neuron
 from torch.autograd import Function
 from torch.nn import *
-
-class ScaledNeuron(Module):
-    def __init__(self, scale):
-        super(ScaledNeuron, self).__init__()
-        self.scale = scale
-        self.t = 0
-        self.neuron = neuron.IFNode(v_reset=None)
-        print("Making neuron", scale)
-
-    def forward(self, x):
-        x = x / self.scale
-        if self.t == 0:
-            self.neuron(torch.ones_like(x)*0.5)
-        x = self.neuron(x)
-        self.t += 1
-        return x * self.scale
-    def reset(self):
-        self.t = 0
-        self.neuron.reset()
 
 class dec_to_bin(Function):
     @staticmethod

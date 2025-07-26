@@ -91,26 +91,28 @@ def train_ann(
 
     return best_acc, net
 
-def eval_snn(l_te, model, dev, sim_len, mode, t=8):
+def eval_snn(l_te, net, dev, sim_len, t=8):
     tot = torch.zeros(sim_len).to(dev)
-    length = 0
+
+    n_samples = 0
     sparsity, neuron_count = 0, 0
-    model = model.to(dev)
-    model.eval()
+    net = net.to(dev)
+    net.eval()
     # valuate
     with torch.no_grad():
         for idx, (xs, ys) in enumerate(tqdm(l_te)):
             spikes = 0
-            length += len(ys)
+            n_samples += len(ys)
             xs = xs.to(dev)
             ys = ys.to(dev)
+            print(xs.shape, ys.shape)
             for t in range(sim_len):
-                out, act_loss = model(xs, t, mode)
+                yhats, act_loss = net(xs, t, "snn")
                 sparsity += act_loss
-                neuron_count += model.neuron_count
-                spikes += out
+                neuron_count += net.neuron_count
+                spikes += yhats
                 tot[t] += (ys==spikes.max(1)[1]).sum()
-            reset_net(model)
+            reset_net(net)
     # This is wrong
     neuron_count = neuron_count/(t+1)
-    return tot / length, sparsity / neuron_count
+    return tot / n_samples, sparsity / neuron_count
