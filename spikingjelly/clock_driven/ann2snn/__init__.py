@@ -119,7 +119,6 @@ class parser:
                 model._modules[name] = new_module
             if "BatchNorm" in module.__class__.__name__:
                 try:
-                    # NSIFNode是能够产生正负脉冲的模型，现在版本被删除
                     new_module = nn.Sequential(module, neuron.NSIFNode(v_threshold=(-1.0, 1.0), v_reset=None))
                 except AttributeError:
                     new_module = module
